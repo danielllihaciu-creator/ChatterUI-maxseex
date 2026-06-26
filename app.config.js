@@ -53,6 +53,7 @@ module.exports = {
                 'expo-build-properties',
                 {
                     android: {
+                        kotlinVersion: '1.9.25',
                         largeHeap: true,
                         usesCleartextTraffic: true,
                         enableProguardInReleaseBuilds: true,
