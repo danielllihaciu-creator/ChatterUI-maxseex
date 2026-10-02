@@ -4,7 +4,7 @@ module.exports = {
     expo: {
         name: IS_DEV ? 'ChatterUI (DEV)' : 'ChatterUI',
         newArchEnabled: true,
-        slug: 'meditationapp',
+        slug: 'chatterui-myapp',
         version: '0.9.0',
         orientation: 'default',
         icon: './assets/images/icon.png',
