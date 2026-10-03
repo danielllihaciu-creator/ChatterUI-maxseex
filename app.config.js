@@ -29,7 +29,7 @@ module.exports = {
                 backgroundColor: '#000',
             },
             edgeToEdgeEnabled: true,
-            package: IS_DEV ? 'com.Vali98.ChatterUIDev' : 'com.Vali98.ChatterUI',
+            package: IS_DEV ? 'com.danielllihaciu.ChatterUIDev' : 'com.danielllihaciu.ChatterUI', // <-- your own package name, not Vali98's
             userInterfaceStyle: 'dark',
             permissions: [
                 'android.permission.FOREGROUND_SERVICE',
@@ -59,6 +59,7 @@ module.exports = {
                         enableProguardInReleaseBuilds: true,
                         enableShrinkResourcesInReleaseBuilds: true,
                         useLegacyPackaging: true,
+                        buildArchs: ['arm64-v8a'], // <-- ONLY arm64, cuts build time by ~70%
                         extraProguardRules: '-keep class com.rnllama.** { *; }',
                     },
                 },
