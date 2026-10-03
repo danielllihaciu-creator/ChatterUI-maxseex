@@ -18,18 +18,18 @@ module.exports = {
                 tinted: './assets/images/icon.png',
             },
             supportsTablet: true,
-            package: IS_DEV ? 'com.Vali98.ChatterUIDev' : 'com.Vali98.ChatterUI',
-            bundleIdentifier: IS_DEV ? 'com.Vali98.ChatterUIDev' : 'com.Vali98.ChatterUI',
+            package: IS_DEV ? 'com.danielllihaciu.ChatterUIDev' : 'com.danielllihaciu.ChatterUI',
+            bundleIdentifier: IS_DEV ? 'com.danielllihaciu.ChatterUIDev' : 'com.danielllihaciu.ChatterUI',
         },
         android: {
             adaptiveIcon: {
                 foregroundImage: './assets/images/adaptive-icon-foreground.png',
-                backgroundImage: './assets/images//adaptive-icon-background.png',
+                backgroundImage: './assets/images/adaptive-icon-background.png',
                 monochromeImage: './assets/images/adaptive-icon-foreground.png',
                 backgroundColor: '#000',
             },
             edgeToEdgeEnabled: true,
-            package: IS_DEV ? 'com.danielllihaciu.ChatterUIDev' : 'com.danielllihaciu.ChatterUI', // <-- your own package name, not Vali98's
+            package: IS_DEV ? 'com.danielllihaciu.ChatterUIDev' : 'com.danielllihaciu.ChatterUI',
             userInterfaceStyle: 'dark',
             permissions: [
                 'android.permission.FOREGROUND_SERVICE',
@@ -59,7 +59,7 @@ module.exports = {
                         enableProguardInReleaseBuilds: true,
                         enableShrinkResourcesInReleaseBuilds: true,
                         useLegacyPackaging: true,
-                        buildArchs: ['arm64-v8a'], // <-- ONLY arm64, cuts build time by ~70%
+                        buildArchs: ['arm64-v8a'],
                         extraProguardRules: '-keep class com.rnllama.** { *; }',
                     },
                 },
