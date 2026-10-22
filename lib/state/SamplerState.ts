@@ -1,4 +1,4 @@
-limport { getDocumentAsync } from 'expo-document-picker'
+import { getDocumentAsync } from 'expo-document-picker'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/react/shallow'
