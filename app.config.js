@@ -59,7 +59,7 @@ module.exports = {
                         enableProguardInReleaseBuilds: true,
                         enableShrinkResourcesInReleaseBuilds: true,
                         useLegacyPackaging: true,
-                        buildArchs: ['arm64-v8a'],
+                        buildArchs: ['x86-64"],
                         extraProguardRules: '-keep class com.rnllama.** { *; }',
                     },
                 },
