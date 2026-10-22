@@ -1,40 +1,59 @@
 {
+
   "cli": {
+
     "appVersionSource": "local"
+
   },
+
   "build": {
+
     "development": {
+
       "developmentClient": true,
+
       "distribution": "internal",
+
       "node": "22.13.0",
+
       "android": {
+
         "buildType": "apk"
-      },
-      "env": {
-        "EAS_GRADLE_CACHE": "1"
+
       }
+
     },
+
     "preview": {
+
       "distribution": "internal",
+
       "node": "22.13.0",
+
       "android": {
-        "buildType": "apk",
-        "resourceClass": "large"
-      },
-      "env": {
-        "EAS_GRADLE_CACHE": "1"
+
+        "buildType": "apk"
+
       }
+
     },
+
     "production": {
+
       "distribution": "store",
+
       "node": "22.13.0",
+
       "android": {
+
         "buildType": "apk",
+
         "gradleCommand": ":app:assembleRelease -PreactNativeArchitectures=x86_64 -Pandroid.minSdkVersion=23"
-      },
-      "env": {
-        "EAS_GRADLE_CACHE": "1"
+
       }
+
     }
+
   }
+
 }
