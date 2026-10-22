@@ -1,4 +1,4 @@
-import { getDocumentAsync } from 'expo-document-picker'
+limport { getDocumentAsync } from 'expo-document-picker'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/react/shallow'
@@ -64,7 +64,6 @@ export namespace SamplersManager {
                 updateCurrentConfig: (config) => {
                     const configs = get().configList
                     const index = get().currentConfigIndex
-                    // Ensure we fix the config before saving to state!
                     config.data = fixSamplerConfig(config.data)
                     configs[index] = config
                     set({ configList: [...configs] })
@@ -176,41 +175,47 @@ export function fixSamplerConfig(config: SamplerConfigData) {
     const defaultKeys = Object.values(SamplerID) as SamplerID[]
     let samekeys = true
 
-    // List of all Sampler IDs that REQUIRE a decimal (float) value
-    const decimalKeys = [
-        SamplerID.TEMPERATURE,
-        SamplerID.TOP_P,
-        SamplerID.MIN_P,
-        SamplerID.TYPICAL_P,
-        SamplerID.REPETITION_PENALTY,
-        SamplerID.PRESENCE_PENALTY,
-        SamplerID.FREQUENCY_PENALTY,
-        // Add any other decimal settings you have here
-    ];
-
-    defaultKeys.map((key) => {
-        // 1. Handle SEED (Integer)
-        if (key === SamplerID.SEED) {
-            const parsed = parseInt(String(config[key]), 10);
-            config[key] = isNaN(parsed) ? (Samplers[key].values.default as number) : parsed;
-        }
-        // 2. Handle DECIMALS (Temperature, Top P, etc.)
-        else if (decimalKeys.includes(key)) {
-            const defaultVal = (Samplers[key].values.default as number) ?? 0;
-            // Force convert strings like "0.7" to 0.7
-            config[key] = sanitizeDecimal(config[key], defaultVal);
+    defaultKeys.forEach((key) => {
+        // 1. If it's missing, add the default
+        if (!existingKeys.includes(key)) {
+            //@ts-expect-error needs more coercion
+            config[key] = Samplers[key].values.default
+            samekeys = false
+            Logger.debug(`Sampler Config was missing field: ${key}`)
+            return
         }
 
-        // 3. Check for missing keys
-        if (existingKeys.includes(key)) return;
+        // 2. Check what TYPE the default value is. That tells us what the API expects.
+        const defaultValue = Samplers[key].values.default
         
-        const data = Samplers[key].values.default
-        //@ts-expect-error needs more coercion, but probably fine
-        config[key] = data
-        samekeys = false
-        Logger.debug(`Sampler Config was missing field: ${key}`)
+        if (typeof defaultValue === 'number') {
+            // If the default is an integer (no decimal point), force integer
+            if (Number.isInteger(defaultValue)) {
+                const parsed = parseInt(String(config[key]), 10)
+                //@ts-expect-error needs more coercion
+                config[key] = isNaN(parsed) ? defaultValue : parsed
+            } 
+            // If the default is a decimal (like 0.7), force float
+            else {
+                const parsed = parseFloat(String(config[key]))
+                //@ts-expect-error needs more coercion
+                config[key] = isNaN(parsed) ? defaultValue : parsed
+            }
+        }
+        // 3. If the default is a boolean, force boolean
+        else if (typeof defaultValue === 'boolean') {
+            if (typeof config[key] === 'string') {
+                //@ts-expect-error needs more coercion
+                config[key] = (config[key] as string).toLowerCase() === 'true'
+            }
+        }
+        // 4. Strings stay strings
+        else if (typeof defaultValue === 'string') {
+            //@ts-expect-error needs more coercion
+            config[key] = String(config[key])
+        }
     })
-    
+
     if (!samekeys) Logger.warn(`Sampler Config had missing fields and was fixed!`)
     return config
 }
