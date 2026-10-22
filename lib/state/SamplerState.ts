@@ -64,6 +64,8 @@ export namespace SamplersManager {
                 updateCurrentConfig: (config) => {
                     const configs = get().configList
                     const index = get().currentConfigIndex
+                    // Ensure we fix the config before saving to state!
+                    config.data = fixSamplerConfig(config.data)
                     configs[index] = config
                     set({ configList: [...configs] })
                 },
@@ -159,20 +161,56 @@ export namespace SamplersManager {
     }
 }
 
+// Helper function to safely convert any value (string or number) to a valid decimal number
+function sanitizeDecimal(value: any, defaultValue: number): number {
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+        const parsed = parseFloat(value);
+        return isNaN(parsed) ? defaultValue : parsed;
+    }
+    return defaultValue;
+}
+
 export function fixSamplerConfig(config: SamplerConfigData) {
     const existingKeys = Object.keys(config)
     const defaultKeys = Object.values(SamplerID) as SamplerID[]
     let samekeys = true
+
+    // List of all Sampler IDs that REQUIRE a decimal (float) value
+    const decimalKeys = [
+        SamplerID.TEMPERATURE,
+        SamplerID.TOP_P,
+        SamplerID.MIN_P,
+        SamplerID.TYPICAL_P,
+        SamplerID.REPETITION_PENALTY,
+        SamplerID.PRESENCE_PENALTY,
+        SamplerID.FREQUENCY_PENALTY,
+        // Add any other decimal settings you have here
+    ];
+
     defaultKeys.map((key) => {
-        if (key === SamplerID.SEED && typeof config[key] === 'string')
-            config[key] = parseInt(config[key])
-        if (existingKeys.includes(key)) return
+        // 1. Handle SEED (Integer)
+        if (key === SamplerID.SEED) {
+            const parsed = parseInt(String(config[key]), 10);
+            config[key] = isNaN(parsed) ? (Samplers[key].values.default as number) : parsed;
+        }
+        // 2. Handle DECIMALS (Temperature, Top P, etc.)
+        else if (decimalKeys.includes(key)) {
+            const defaultVal = (Samplers[key].values.default as number) ?? 0;
+            // Force convert strings like "0.7" to 0.7
+            config[key] = sanitizeDecimal(config[key], defaultVal);
+        }
+
+        // 3. Check for missing keys
+        if (existingKeys.includes(key)) return;
+        
         const data = Samplers[key].values.default
         //@ts-expect-error needs more coercion, but probably fine
         config[key] = data
         samekeys = false
         Logger.debug(`Sampler Config was missing field: ${key}`)
     })
+    
     if (!samekeys) Logger.warn(`Sampler Config had missing fields and was fixed!`)
     return config
 }
