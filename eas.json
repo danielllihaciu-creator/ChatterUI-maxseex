@@ -6,18 +6,21 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "node": "22.13.0",
       "android": {
         "buildType": "apk"
       }
     },
     "preview": {
       "distribution": "internal",
+      "node": "22.13.0",
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
       "distribution": "store",
+      "node": "22.13.0",
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease -PreactNativeArchitectures=x86_64 -Pandroid.minSdkVersion=23"
