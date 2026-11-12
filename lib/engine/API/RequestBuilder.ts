@@ -43,6 +43,8 @@ export const buildRequest = async ({
             return hordeRequest(fields)
         case 'claude':
             return claudeRequest(apiConfig, instruct, fields)
+        case 'gemini':
+            return geminiRequest(apiConfig, fields)
         case 'custom':
             return customRequest(apiConfig, apiValues, fields)
     }
@@ -132,6 +134,87 @@ const claudeRequest = async (
         ...model,
         ...stop,
         ...finalPrompt,
+    }
+}
+
+const toGeminiParts = (raw: unknown) => {
+    const parts: any[] = []
+    if (typeof raw === 'string') {
+        if (raw.trim()) parts.push({ text: raw })
+        return parts
+    }
+    if (!Array.isArray(raw)) return parts
+    for (const item of raw as any[]) {
+        if (item?.type === 'text' || item?.type === 'input_text') {
+            if (item.text?.trim()) parts.push({ text: item.text })
+        } else if (item?.type === 'image_url') {
+            const url: string = item.image_url?.url ?? ''
+            const match = /^data:([^;,]+);base64,/.exec(url)
+            if (!match) continue
+            const mimeType = match[1].toLowerCase() === 'image/jpg' ? 'image/jpeg' : match[1]
+            parts.push({ inlineData: { mimeType, data: url.slice(match[0].length) } })
+        } else if (item?.type === 'input_audio') {
+            parts.push({
+                inlineData: {
+                    mimeType: `audio/${item.input_audio.format}`,
+                    data: item.input_audio.data,
+                },
+            })
+        }
+    }
+    return parts
+}
+
+const geminiRequest = async (
+    config: APIConfiguration,
+    { payloadFields, model, stop, prompt }: Field
+) => {
+    const messages = prompt?.[config.request.promptKey]
+    if (!Array.isArray(messages) || config.request.completionType.type !== 'chatCompletions')
+        return
+    const { systemRole, assistantRole, contentName } = config.request.completionType
+
+    const system: string[] = []
+    const contents: { role: string; parts: any[] }[] = []
+    for (const msg of messages) {
+        const parts = toGeminiParts(msg[contentName])
+        if (parts.length === 0) continue
+        if (msg.role === systemRole) {
+            system.push(...parts.filter((p) => p.text).map((p) => p.text as string))
+            continue
+        }
+        const role = msg.role === assistantRole ? 'model' : 'user'
+        const last = contents[contents.length - 1]
+        if (last && last.role === role) last.parts.push(...parts)
+        else contents.push({ role, parts })
+    }
+
+    const modelName = String(model?.model ?? '')
+    const isImageModel = modelName.toLowerCase().includes('image')
+    const systemText = system.join('\n\n')
+
+    // image models can reject systemInstruction, so fold it into the first user turn
+    if (systemText && isImageModel) {
+        if (contents[0]?.role === 'user') contents[0].parts.unshift({ text: systemText })
+        else contents.unshift({ role: 'user', parts: [{ text: systemText }] })
+    }
+    if (contents.length === 0 || contents[0].role === 'model') {
+        contents.unshift({ role: 'user', parts: [{ text: '(Start of conversation)' }] })
+    }
+
+    const generationConfig: Record<string, any> = { ...payloadFields }
+    if (typeof generationConfig.topK === 'number' && generationConfig.topK <= 0)
+        delete generationConfig.topK
+    const stopSeq = stop?.[config.request.stopKey]
+    if (Array.isArray(stopSeq) && stopSeq.length > 0) generationConfig.stopSequences = stopSeq
+    if (isImageModel) generationConfig.responseModalities = ['TEXT', 'IMAGE']
+
+    return {
+        ...(systemText && !isImageModel
+            ? { systemInstruction: { parts: [{ text: systemText }] } }
+            : {}),
+        contents,
+        generationConfig,
     }
 }
 
