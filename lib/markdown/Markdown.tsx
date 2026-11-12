@@ -1,5 +1,6 @@
 import { setStringAsync } from 'expo-clipboard'
-import { useCallback, useMemo } from 'react'
+import { Image } from 'expo-image'
+import { useCallback, useMemo, useState } from 'react'
 import { Platform, StyleSheet, Text, View } from 'react-native'
 import { MarkdownIt } from 'react-native-markdown-display'
 import MathJax from 'react-native-mathjax-svg'
@@ -14,11 +15,29 @@ import latexPlugin from './MarkdownLatexPlugin'
 import doubleQuotePlugin from './MarkdownQuotePlugin'
 import thinkPlugin from './MarkdownThinkPlugin'
 
+const MarkdownImage = ({ uri, alt }: { uri: string; alt?: string }) => {
+    const [ratio, setRatio] = useState(1)
+    return (
+        <Image
+            source={{ uri }}
+            accessibilityLabel={alt}
+            contentFit="contain"
+            style={{ width: '100%', aspectRatio: ratio, borderRadius: 8, marginVertical: 8 }}
+            onLoad={(e) => {
+                if (e.source.width && e.source.height) setRatio(e.source.width / e.source.height)
+            }}
+        />
+    )
+}
+
 export namespace MarkdownStyle {
     export const Rules = MarkdownIt({ typographer: true })
         .use(thinkPlugin)
         .use(doubleQuotePlugin)
         .use(latexPlugin)
+
+    // markdown-it blocks file: and most data: urls by default; allow them for generated images
+    Rules.validateLink = (url: string) => !/^\s*(javascript|vbscript):/i.test(url)
 
     export const RenderRules = {
         fence: (node: any, children: any, parent: any, styles: any, inheritedStyles = {}) => {
@@ -56,6 +75,9 @@ export namespace MarkdownStyle {
                 </View>
             )
         },
+        image: (node: any) => (
+            <MarkdownImage key={node.key} uri={node.attributes.src} alt={node.attributes.alt} />
+        ),
         double_quote: (node: any, children: any, parent: any, styles: any) => {
             return (
                 <Text key={node.key} style={styles.double_quote}>
