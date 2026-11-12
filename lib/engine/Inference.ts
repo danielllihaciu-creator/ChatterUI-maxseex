@@ -13,6 +13,7 @@ import { Logger } from '../state/Logger'
 import { APIBuilderParams, buildAndSendRequest } from './API/APIBuilder'
 import { APIConfiguration, APIValues } from './API/APIBuilder.types'
 import { APIManager } from './API/APIManagerState'
+import { isGeneratedImageChunk } from './API/GeminiImages'
 import { localInference } from './LocalInference'
 import { Tokenizer } from './Tokenizer'
 
@@ -119,7 +120,7 @@ async function chatInferenceStream() {
             if (currentBuffer.includes(text)) return
         }
         Chats.useChatState.getState().insertBuffer(text)
-        useTTSStore.getState().insertBuffer(text)
+        if (!isGeneratedImageChunk(text)) useTTSStore.getState().insertBuffer(text)
     }
     fields.onEnd = async () => {
         const chat = Chats.useChatState.getState().data
