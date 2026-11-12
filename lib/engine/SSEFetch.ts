@@ -17,6 +17,7 @@ export class SSEFetch {
     private onClose = () => {}
     private closeStream = () => {}
     private cancelled = false
+    private buffer = ''
     public abort() {
         this.abortController.abort()
 
@@ -30,6 +31,7 @@ export class SSEFetch {
         this.abortController = new AbortController()
         const body = values.method === 'POST' ? { body: values.body } : {}
         this.cancelled = false
+        this.buffer = ''
         try {
             const res = await fetch(values.endpoint, {
                 signal: this.abortController.signal,
@@ -53,9 +55,17 @@ export class SSEFetch {
                 const { value, done } = await reader.read()
                 if (done || this.cancelled) break
 
-                const data = this.decoder.decode(value)
-                const output = parseSSE(data)
-                output.forEach((item) => this.onEvent(item))
+                this.buffer += this.decoder.decode(value, { stream: true })
+                const lastNewline = this.buffer.lastIndexOf('\n')
+                if (lastNewline === -1) continue
+                const complete = this.buffer.slice(0, lastNewline)
+                this.buffer = this.buffer.slice(lastNewline + 1)
+                parseSSE(complete).forEach((item) => this.onEvent(item))
+            }
+            if (this.buffer.trim() && !this.cancelled) {
+                const rest = this.buffer
+                this.buffer = ''
+                parseSSE(rest).forEach((item) => this.onEvent(item))
             }
         } catch (e) {
             if (this.abortController.signal.aborted) {
