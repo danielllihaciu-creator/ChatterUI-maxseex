@@ -8,6 +8,7 @@ import { getNestedValue } from '@lib/utils/Parsing'
 
 import { APIConfiguration } from './APIBuilder.types'
 import { buildContext, ContextBuilderParams } from './ContextBuilder'
+import { saveGeneratedImage, toImageMarkdown } from './GeminiImages'
 import { buildRequest, RequestBuilderParams } from './RequestBuilder'
 
 export interface APIBuilderParams
@@ -115,13 +116,66 @@ export const buildAndSendRequest = async ({
             }
             return false
         }
+        const isGemini = apiConfig.payload.type === 'gemini'
+
+        let endpoint = apiValues.endpoint
+        if (isGemini) {
+            const rawName = getNestedValue(apiValues.model, apiConfig.model.nameParser)
+            if (!rawName) {
+                Logger.errorToast('No model selected')
+                stopGenerating()
+                return
+            }
+            const name = String(rawName)
+            const modelPath = name.startsWith('models/') ? name : 'models/' + name
+            endpoint = endpoint.replace('{{model}}', modelPath)
+        }
+
+        const handleGeminiEvent = (event: any) => {
+            try {
+                const data = typeof event === 'string' ? JSON.parse(event) : event
+                if (data?.promptFeedback?.blockReason)
+                    Logger.errorToast('Blocked by Gemini: ' + data.promptFeedback.blockReason)
+                const candidate = data?.candidates?.[0]
+                const parts = candidate?.content?.parts
+                if (!Array.isArray(parts)) {
+                    const reason = candidate?.finishReason
+                    if (reason && reason !== 'STOP' && reason !== 'MAX_TOKENS')
+                        Logger.warn('Gemini finish reason: ' + reason)
+                    return
+                }
+                for (const part of parts) {
+                    if (part?.thought) continue
+                    if (typeof part?.text === 'string' && part.text) {
+                        const text = part.text.replaceAll(replaceStrings, '')
+                        if (text) onData(text)
+                    }
+                    const inline = part?.inlineData ?? part?.inline_data
+                    if (inline?.data) {
+                        const uri = saveGeneratedImage(
+                            inline.data,
+                            inline.mimeType ?? inline.mime_type ?? 'image/png'
+                        )
+                        if (uri) onData(toImageMarkdown(uri))
+                        else Logger.errorToast('Failed to save generated image')
+                    }
+                }
+            } catch (e) {
+                Logger.error('Failed to parse Gemini event: ' + e)
+            }
+        }
+
         let inReasoning = false
         const isChatCompletions = apiConfig.request.completionType.type === 'chatCompletions'
 
         return response({
-            endpoint: apiValues.endpoint,
+            endpoint: endpoint,
             payload: payload,
             onEvent: (event) => {
+                if (isGemini) {
+                    handleGeminiEvent(event)
+                    return
+                }
                 if (
                     parseOutput(event, apiConfig.request.responseParsePattern, false, inReasoning)
                 ) {
