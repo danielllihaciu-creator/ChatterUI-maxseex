@@ -7,6 +7,8 @@ import { Logger } from '@lib/state/Logger'
 import { replaceMacros } from '@lib/state/Macros'
 import { mmkv } from '@lib/storage/MMKV'
 import { readBase64Async } from '@lib/utils/File'
+
+import { stripGeneratedImages } from './GeminiImages'
 import { Macro } from '@lib/utils/Macros'
 
 import { APIConfiguration, APIValues } from './APIBuilder.types'
@@ -159,7 +161,10 @@ export const buildChatCompletionContext = async ({
                 [completionFeats.contentName]: [
                     {
                         type: 'text',
-                        text: replaceMacrosInternal(prefill + swipe_data.swipe, instruct),
+                        text: replaceMacrosInternal(
+                            prefill + stripGeneratedImages(swipe_data.swipe),
+                            instruct
+                        ),
                     },
                     ...images,
                 ],
@@ -168,7 +173,7 @@ export const buildChatCompletionContext = async ({
             messageBuffer.push({
                 role: role,
                 [completionFeats.contentName]: replaceMacrosInternal(
-                    prefill + swipe_data.swipe,
+                    prefill + stripGeneratedImages(swipe_data.swipe),
                     instruct
                 ),
             })
