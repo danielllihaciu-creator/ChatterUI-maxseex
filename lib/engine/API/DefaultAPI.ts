@@ -860,4 +860,73 @@ export const defaultTemplates: APIConfiguration[] = [
             selectableModel: false,
         },
     },
+
+    // Google Gemini - native API (supports image generation, eg gemini-2.5-flash-image)
+    {
+        version: 1,
+        name: 'Google Gemini (Native)',
+
+        defaultValues: {
+            endpoint:
+                'https://generativelanguage.googleapis.com/v1beta/{{model}}:streamGenerateContent?alt=sse',
+            modelEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000',
+            prefill: '',
+            firstMessage: '',
+            key: '',
+            model: undefined,
+        },
+
+        features: {
+            usePrefill: false,
+            useFirstMessage: false,
+            useKey: true,
+            useModel: true,
+            multipleModels: false,
+        },
+
+        request: {
+            requestType: 'stream',
+            samplerFields: [
+                { externalName: 'max_context_length', samplerID: SamplerID.CONTEXT_LENGTH },
+                { externalName: 'maxOutputTokens', samplerID: SamplerID.GENERATED_LENGTH },
+                { externalName: 'temperature', samplerID: SamplerID.TEMPERATURE },
+                { externalName: 'topP', samplerID: SamplerID.TOP_P },
+                { externalName: 'topK', samplerID: SamplerID.TOP_K },
+            ],
+            completionType: {
+                type: 'chatCompletions',
+                userRole: 'user',
+                systemRole: 'system',
+                assistantRole: 'assistant',
+                contentName: 'content',
+                supportsAudio: true,
+                supportsImages: true,
+            },
+            authHeader: 'x-goog-api-key',
+            authPrefix: '',
+            responseParsePattern: 'candidates.0.content.parts.0.text',
+            useStop: true,
+            stopKey: 'stopSequences',
+            promptKey: 'messages',
+            removeLength: true,
+            stopSequenceLimit: 5,
+        },
+
+        payload: {
+            type: 'gemini',
+        },
+
+        model: {
+            useModelContextLength: false,
+            nameParser: 'name',
+            contextSizeParser: 'inputTokenLimit',
+            modelListParser: 'models',
+        },
+
+        ui: {
+            editableCompletionPath: true,
+            editableModelPath: true,
+            selectableModel: true,
+        },
+    },
 ]
